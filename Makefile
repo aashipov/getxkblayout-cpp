@@ -1,9 +1,10 @@
 CXX      := g++
-CXXFLAGS := -O3
 CPPFLAGS :=
+LDFLAGS  := 
 LDLIBS   := -lX11 -lxkbfile
 
 PREFIX   ?= /usr/local
+BINDIR   ?= $(PREFIX)/bin
 PROFILE  ?= Release
 
 TARGET   := getxkblayout
@@ -11,25 +12,35 @@ TARGET   := getxkblayout
 SRC_DIR  := src
 BUILD_DIR:= build/$(PROFILE)
 
+# ─── PROFILE CONFIGURATION ──────────────────────────────────────────
+# Dynamically adjusts flags based on the chosen profile
+ifeq ($(PROFILE),Debug)
+    CXXFLAGS := -O0 -g3 -DDEBUG -Wall -Wextra -std=c++20
+else
+    CXXFLAGS := -O3 -Wall -Wextra -DNDEBUG -std=c++20
+endif
+# ────────────────────────────────────────────────────────────────────
+
 SRCS     := $(wildcard $(SRC_DIR)/*.cpp)
 OBJS     := $(SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
 
-.PHONY: all clean
+.PHONY: all clean install uninstall
 
-all: clean $(TARGET)
+all: $(BUILD_DIR)/$(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) $^ -o $(BUILD_DIR)/$@ $(LDLIBS)
+$(BUILD_DIR)/$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf build/
 
-install:
-	install -m 0755 $(BUILD_DIR)/$(TARGET) $(PREFIX)/bin/
+install: all
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 0755 $(BUILD_DIR)/$(TARGET) $(DESTDIR)$(BINDIR)/
 
 uninstall:
-	rm $(PREFIX)/bin/$(TARGET)
+	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
